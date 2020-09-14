@@ -69,8 +69,5 @@ func (mb *mongoBatch) Commit() error {
 	ctx, cls := context.WithTimeout(context.Background(), mb.ds.opTimeout*time.Duration(len(operations)))
 	defer cls()
 	_, err := mb.ds.col.BulkWrite(ctx, operations, &bulkOption)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }

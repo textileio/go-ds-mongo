@@ -47,7 +47,7 @@ type keyValue struct {
 	Value []byte `bson:"v"`
 }
 
-func New(ctx context.Context, uri string, opts ...Option) (*MongoDS, error) {
+func New(ctx context.Context, uri string, dbName string, opts ...Option) (*MongoDS, error) {
 	m, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, fmt.Errorf("connecting to MongoDB: %s", err)
@@ -57,7 +57,7 @@ func New(ctx context.Context, uri string, opts ...Option) (*MongoDS, error) {
 		f(&config)
 	}
 
-	db := m.Database(config.dbName)
+	db := m.Database(dbName)
 
 	_ = db.CreateCollection(ctx, config.collName)
 	col := db.Collection(config.collName)

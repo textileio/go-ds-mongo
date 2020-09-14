@@ -215,7 +215,7 @@ func setup(t *testing.T) *MongoDS {
 }
 
 func createMongoDS(t *testing.T, uri string) *MongoDS {
-	ds, err := New(context.Background(), uri)
+	ds, err := New(context.Background(), uri, "woopwoop")
 	require.NoError(t, err)
 	return ds
 
