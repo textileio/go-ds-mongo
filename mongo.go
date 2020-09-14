@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"sync"
 	"time"
 
@@ -46,20 +47,20 @@ type keyValue struct {
 	Value []byte `bson:"v"`
 }
 
-func New(ctx context.Context, uri string, dbName string, collName string, opts ...Option) (*MongoDS, error) {
+func New(ctx context.Context, uri string, opts ...Option) (*MongoDS, error) {
 	m, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, fmt.Errorf("connecting to MongoDB: %s", err)
 	}
-	db := m.Database(dbName)
-
-	_ = db.CreateCollection(ctx, collName)
-	col := db.Collection(collName)
-
 	config := defaultConfig
 	for _, f := range opts {
 		f(&config)
 	}
+
+	db := m.Database(config.dbName)
+
+	_ = db.CreateCollection(ctx, config.collName)
+	col := db.Collection(config.collName)
 
 	return &MongoDS{
 		m:          m,
@@ -289,7 +290,7 @@ func (m *MongoDS) query(ctx context.Context, q dsextensions.QueryExt) (query.Res
 	// of returning strictly child keys.
 	var filters bson.A
 	if prefix != "/" {
-		rgx := fmt.Sprintf("^%s/.*", prefix)
+		rgx := fmt.Sprintf("^%s/.*", regexp.QuoteMeta(prefix))
 		filters = append(filters, bson.M{"_id": bson.M{"$regex": primitive.Regex{Pattern: rgx}}})
 	}
 	seekPrefix := datastore.NewKey(q.SeekPrefix).String()
