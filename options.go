@@ -4,7 +4,7 @@ import "time"
 
 var (
 	defaultConfig = config{
-		opTimeout:  5 * time.Second,
+		opTimeout:  30 * time.Second,
 		txnTimeout: 30 * time.Second,
 		collName:   "kvstore",
 	}

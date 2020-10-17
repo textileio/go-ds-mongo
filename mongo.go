@@ -345,9 +345,11 @@ func (m *MongoDS) query(ctx context.Context, q dsextensions.QueryExt) (query.Res
 			return
 		}
 
-		ctx, cls := context.WithTimeout(context.Background(), m.opTimeout)
-		defer cls()
-		defer it.Close(ctx)
+		defer func() {
+			if err := it.Close(context.Background()); err != nil {
+				log.Errorf("closing iterator: %s", err)
+			}
+		}()
 
 		if len(q.Filters) > 0 {
 			// skip to the offset
@@ -451,7 +453,7 @@ func (m *MongoDS) query(ctx context.Context, q dsextensions.QueryExt) (query.Res
 		}
 		if it.Err() != nil {
 			select {
-			case qrb.Output <- dsq.Result{Error: err}:
+			case qrb.Output <- dsq.Result{Error: it.Err()}:
 			case <-worker.Closing(): // client told us to close early
 				return
 			}
