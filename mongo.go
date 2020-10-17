@@ -405,7 +405,7 @@ func (m *MongoDS) query(ctx context.Context, q dsextensions.QueryExt) (query.Res
 			}
 			if it.Err() != nil {
 				select {
-				case qrb.Output <- dsq.Result{Error: err}:
+				case qrb.Output <- dsq.Result{Error: it.Err()}:
 				case <-worker.Closing(): // client told us to close early
 					return
 				}
