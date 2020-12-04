@@ -3,25 +3,34 @@ package mongods
 import (
 	"context"
 	"crypto/rand"
+	"encoding/base32"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
 	dstest "github.com/ipfs/go-datastore/test"
-	"github.com/ory/dockertest/v3"
 	"github.com/stretchr/testify/require"
 	dsextensions "github.com/textileio/go-datastore-extensions"
+	"github.com/textileio/go-ds-mongo/test"
 )
 
+func TestMain(m *testing.M) {
+	cleanup := test.StartMongoDB()
+	exitVal := m.Run()
+	cleanup()
+	os.Exit(exitVal)
+}
+
 func TestMongoDatastore(t *testing.T) {
-	ds := setup(t)
+	ds := createMongoDS(t, test.MongoUri)
 	dstest.SubtestAll(t, ds)
 }
 
 func TestQuerySeek(t *testing.T) {
-	ds := setup(t)
+	ds := createMongoDS(t, test.MongoUri)
 	type kv struct {
 		key   string
 		value []byte
@@ -39,11 +48,11 @@ func TestQuerySeek(t *testing.T) {
 	}
 
 	cases := []dsextensions.QueryExt{
-		{},                   // All
-		{SeekPrefix: "/1/1"}, // All from /1/1
-		{SeekPrefix: "/1/3"}, // All from mid /1 key
+		{},                                                     // All
+		{SeekPrefix: "/1/1"},                                   // All from /1/1
+		{SeekPrefix: "/1/3"},                                   // All from mid /1 key
 		{Query: query.Query{Prefix: "/1"}, SeekPrefix: "/1/2"}, // All from /1/2 but only in /1 space.
-		{SeekPrefix: "/2/2"}, // Only /2/2
+		{SeekPrefix: "/2/2"},                                   // Only /2/2
 		{SeekPrefix: "/5/1"},
 	}
 	// Automatically include descending order tests
@@ -96,8 +105,7 @@ func TestQuerySeek(t *testing.T) {
 }
 
 func TestTxnDiscard(t *testing.T) {
-	t.SkipNow() // Should be run with Mongo with replica set, see replset.md
-	ds := setupTxn(t)
+	ds := createMongoDS(t, test.MongoUri)
 
 	txn, err := ds.NewTransaction(false)
 	if err != nil {
@@ -116,12 +124,13 @@ func TestTxnDiscard(t *testing.T) {
 		t.Fatal("key written in aborted transaction still exists")
 	}
 
-	ds.Close()
+	if err = ds.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestTxnCommit(t *testing.T) {
-	t.SkipNow() // Should be run with Mongo with replica set, see replset.md
-	ds := setupTxn(t)
+	ds := createMongoDS(t, test.MongoUri)
 
 	txn, err := ds.NewTransaction(false)
 	if err != nil {
@@ -143,12 +152,13 @@ func TestTxnCommit(t *testing.T) {
 		t.Fatal("key written in committed transaction does not exist")
 	}
 
-	ds.Close()
+	if err = ds.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestTxnBatch(t *testing.T) {
-	t.SkipNow() // Should be run with Mongo with replica set, see replset.md
-	ds := setupTxn(t)
+	ds := createMongoDS(t, test.MongoUri)
 
 	txn, err := ds.NewTransaction(false)
 	if err != nil {
@@ -189,34 +199,19 @@ func TestTxnBatch(t *testing.T) {
 		}
 	}
 
-	ds.Close()
-}
-
-func setupTxn(t *testing.T) *MongoDS {
-	uri := fmt.Sprintf("mongodb://localhost:27017,localhost:27018,localhost:27019/?replicaSet=my-mongo-set")
-	return createMongoDS(t, uri)
-}
-
-func setup(t *testing.T) *MongoDS {
-	pool, err := dockertest.NewPool("")
-	require.NoError(t, err)
-
-	resource, err := pool.Run("mongo", "4.4.0", []string{})
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	uri := fmt.Sprintf("mongodb://127.0.0.1:%s", resource.GetPort("27017/tcp"))
-	return createMongoDS(t, uri)
+	if err = ds.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func createMongoDS(t *testing.T, uri string) *MongoDS {
-	ds, err := New(context.Background(), uri, "woopwoop")
+	ds, err := New(context.Background(), uri, randStoreName())
 	require.NoError(t, err)
 	return ds
+}
 
+func randStoreName() string {
+	b := make([]byte, 12)
+	_, _ = rand.Read(b)
+	return base32.StdEncoding.EncodeToString(b)
 }
