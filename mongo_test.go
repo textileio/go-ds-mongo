@@ -3,7 +3,9 @@ package mongods
 import (
 	"context"
 	"crypto/rand"
+	"encoding/base32"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -12,15 +14,23 @@ import (
 	dstest "github.com/ipfs/go-datastore/test"
 	"github.com/stretchr/testify/require"
 	dsextensions "github.com/textileio/go-datastore-extensions"
+	"github.com/textileio/go-ds-mongo/test"
 )
 
+func TestMain(m *testing.M) {
+	cleanup := test.StartMongoDB()
+	exitVal := m.Run()
+	cleanup()
+	os.Exit(exitVal)
+}
+
 func TestMongoDatastore(t *testing.T) {
-	ds := setup(t)
+	ds := createMongoDS(t, test.MongoUri)
 	dstest.SubtestAll(t, ds)
 }
 
 func TestQuerySeek(t *testing.T) {
-	ds := setup(t)
+	ds := createMongoDS(t, test.MongoUri)
 	type kv struct {
 		key   string
 		value []byte
@@ -95,8 +105,7 @@ func TestQuerySeek(t *testing.T) {
 }
 
 func TestTxnDiscard(t *testing.T) {
-	t.SkipNow() // Should be run with Mongo with replica set, see replset.md
-	ds := setupTxn(t)
+	ds := createMongoDS(t, test.MongoUri)
 
 	txn, err := ds.NewTransaction(false)
 	if err != nil {
@@ -121,8 +130,7 @@ func TestTxnDiscard(t *testing.T) {
 }
 
 func TestTxnCommit(t *testing.T) {
-	t.SkipNow() // Should be run with Mongo with replica set, see replset.md
-	ds := setupTxn(t)
+	ds := createMongoDS(t, test.MongoUri)
 
 	txn, err := ds.NewTransaction(false)
 	if err != nil {
@@ -150,8 +158,7 @@ func TestTxnCommit(t *testing.T) {
 }
 
 func TestTxnBatch(t *testing.T) {
-	t.SkipNow() // Should be run with Mongo with replica set, see replset.md
-	ds := setupTxn(t)
+	ds := createMongoDS(t, test.MongoUri)
 
 	txn, err := ds.NewTransaction(false)
 	if err != nil {
@@ -197,31 +204,14 @@ func TestTxnBatch(t *testing.T) {
 	}
 }
 
-func setupTxn(t *testing.T) *MongoDS {
-	uri := fmt.Sprintf("mongodb://localhost:27017,localhost:27018,localhost:27019/?replicaSet=my-mongo-set")
-	return createMongoDS(t, uri)
-}
-
-func setup(t *testing.T) *MongoDS {
-	pool, err := dockertest.NewPool("")
-	require.NoError(t, err)
-
-	resource, err := pool.Run("mongo", "4.4.0", []string{})
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	uri := fmt.Sprintf("mongodb://127.0.0.1:%s", resource.GetPort("27017/tcp"))
-	return createMongoDS(t, uri)
-}
-
 func createMongoDS(t *testing.T, uri string) *MongoDS {
-	ds, err := New(context.Background(), uri, "woopwoop")
+	ds, err := New(context.Background(), uri, randStoreName())
 	require.NoError(t, err)
 	return ds
+}
 
+func randStoreName() string {
+	b := make([]byte, 12)
+	_, _ = rand.Read(b)
+	return base32.StdEncoding.EncodeToString(b)
 }
