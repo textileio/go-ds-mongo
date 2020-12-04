@@ -10,7 +10,6 @@ import (
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
 	dstest "github.com/ipfs/go-datastore/test"
-	"github.com/ory/dockertest/v3"
 	"github.com/stretchr/testify/require"
 	dsextensions "github.com/textileio/go-datastore-extensions"
 )
@@ -39,11 +38,11 @@ func TestQuerySeek(t *testing.T) {
 	}
 
 	cases := []dsextensions.QueryExt{
-		{},                   // All
-		{SeekPrefix: "/1/1"}, // All from /1/1
-		{SeekPrefix: "/1/3"}, // All from mid /1 key
+		{},                                                     // All
+		{SeekPrefix: "/1/1"},                                   // All from /1/1
+		{SeekPrefix: "/1/3"},                                   // All from mid /1 key
 		{Query: query.Query{Prefix: "/1"}, SeekPrefix: "/1/2"}, // All from /1/2 but only in /1 space.
-		{SeekPrefix: "/2/2"}, // Only /2/2
+		{SeekPrefix: "/2/2"},                                   // Only /2/2
 		{SeekPrefix: "/5/1"},
 	}
 	// Automatically include descending order tests
@@ -116,7 +115,9 @@ func TestTxnDiscard(t *testing.T) {
 		t.Fatal("key written in aborted transaction still exists")
 	}
 
-	ds.Close()
+	if err = ds.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestTxnCommit(t *testing.T) {
@@ -143,7 +144,9 @@ func TestTxnCommit(t *testing.T) {
 		t.Fatal("key written in committed transaction does not exist")
 	}
 
-	ds.Close()
+	if err = ds.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestTxnBatch(t *testing.T) {
@@ -189,7 +192,9 @@ func TestTxnBatch(t *testing.T) {
 		}
 	}
 
-	ds.Close()
+	if err = ds.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func setupTxn(t *testing.T) *MongoDS {

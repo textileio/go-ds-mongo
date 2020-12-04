@@ -40,7 +40,7 @@ type MongoDS struct {
 var _ datastore.Datastore = (*MongoDS)(nil)
 var _ datastore.Batching = (*MongoDS)(nil)
 var _ datastore.TxnDatastore = (*MongoDS)(nil)
-var _ dsextensions.ExtendedDatastore = (*MongoDS)(nil)
+var _ dsextensions.DatastoreExtensions = (*MongoDS)(nil)
 
 type keyValue struct {
 	Key   string `bson:"_id"`
@@ -103,7 +103,7 @@ func (m *MongoDS) Has(key datastore.Key) (bool, error) {
 	return m.has(ctx, key)
 }
 
-func (m *MongoDS) Sync(prefix datastore.Key) error {
+func (m *MongoDS) Sync(datastore.Key) error {
 	return nil
 }
 
@@ -375,7 +375,7 @@ func (m *MongoDS) query(ctx context.Context, q dsextensions.QueryExt) (query.Res
 				matches := true
 				check := func(value []byte) error {
 					e := dsq.Entry{
-						Key:   string(item.Key),
+						Key:   item.Key,
 						Value: value,
 						Size:  len(value), // this function is basically free
 					}

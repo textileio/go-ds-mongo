@@ -28,9 +28,17 @@ type mongoTxn struct {
 	ctx     mongo.SessionContext
 }
 
-var _ datastore.Txn = (*mongoTxn)(nil)
+var _ dsextensions.TxnExt = (*mongoTxn)(nil)
 
 func (m *MongoDS) NewTransaction(readOnly bool) (datastore.Txn, error) {
+	return m.newTransaction(readOnly)
+}
+
+func (m *MongoDS) NewTransactionExtended(readOnly bool) (dsextensions.TxnExt, error) {
+	return m.newTransaction(readOnly)
+}
+
+func (m *MongoDS) newTransaction(bool) (dsextensions.TxnExt, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	if m.closed {
@@ -118,14 +126,6 @@ func (t *mongoTxn) GetSize(key datastore.Key) (int, error) {
 	return t.m.getSize(t.ctx, key)
 }
 
-func (t *mongoTxn) QueryExt(q dsextensions.QueryExt) (query.Results, error) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-	if t.finalized {
-		return nil, ErrTxnFinalized
-	}
-	return t.m.query(t.ctx, q)
-}
 func (t *mongoTxn) Query(q query.Query) (query.Results, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
@@ -134,6 +134,15 @@ func (t *mongoTxn) Query(q query.Query) (query.Results, error) {
 	}
 	qe := dsextensions.QueryExt{Query: q}
 	return t.m.query(t.ctx, qe)
+}
+
+func (t *mongoTxn) QueryExtended(q dsextensions.QueryExt) (query.Results, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	if t.finalized {
+		return nil, ErrTxnFinalized
+	}
+	return t.m.query(t.ctx, q)
 }
 
 func (t *mongoTxn) Delete(key datastore.Key) error {
