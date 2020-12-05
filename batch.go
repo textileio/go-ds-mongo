@@ -3,6 +3,7 @@ package mongods
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -50,7 +51,17 @@ func (mb *mongoBatch) Delete(key datastore.Key) error {
 }
 
 func (mb *mongoBatch) Commit() error {
+	mb.lock.Lock()
+	defer mb.lock.Unlock()
+	if mb.commited {
+		return ErrBatchAlreadyCommited
+	}
+
 	operations := make([]mongo.WriteModel, 0, len(mb.deletes)+len(mb.upserts))
+	if cap(operations) == 0 {
+		mb.commited = true
+		return nil
+	}
 	for k := range mb.deletes {
 		delOp := mongo.NewDeleteOneModel()
 		delOp.SetFilter(bson.M{"_id": k.String()})
@@ -68,6 +79,10 @@ func (mb *mongoBatch) Commit() error {
 	bulkOption.SetOrdered(false) // Will do things in parallel
 	ctx, cls := context.WithTimeout(context.Background(), mb.ds.opTimeout*time.Duration(len(operations)))
 	defer cls()
-	_, err := mb.ds.col.BulkWrite(ctx, operations, &bulkOption)
-	return err
+	if _, err := mb.ds.col.BulkWrite(ctx, operations, &bulkOption); err != nil {
+		return fmt.Errorf("committing batch: %s", err)
+	}
+
+	mb.commited = true
+	return nil
 }
