@@ -25,7 +25,9 @@ func StartMongoDB() (cleanup func()) {
 			"docker-compose",
 			"-f",
 			fmt.Sprintf("%s/docker-compose.yml", dirpath),
-			"down", "-v",
+			"down",
+			"-v",
+			"--remove-orphans",
 		)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -63,21 +65,32 @@ func StartMongoDB() (cleanup func()) {
 	retries := 0
 	var err error
 	for retries < limit {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-		_, err = mongo.Connect(ctx, options.Client().ApplyURI(MongoUri))
+		err = checkServices()
 		if err == nil {
-			cancel()
 			break
 		}
 		time.Sleep(time.Second)
 		retries++
-		cancel()
 	}
 	if retries == limit {
+		makeDown()
 		if err != nil {
 			log.Fatalf("connecting to MongoDB: %s", err)
 		}
 		log.Fatalf("max retries to connect with MongoDB")
 	}
 	return makeDown
+}
+
+func checkServices() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+	mc, err := mongo.Connect(ctx, options.Client().ApplyURI(MongoUri))
+	if err != nil {
+		return err
+	}
+	if err = mc.Ping(ctx, nil); err != nil {
+		return err
+	}
+	return nil
 }
