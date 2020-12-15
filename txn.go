@@ -1,9 +1,7 @@
 package mongods
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/ipfs/go-datastore"
@@ -45,19 +43,19 @@ func (m *MongoDS) newTransaction(bool) (dsextensions.TxnExt, error) {
 		return nil, ErrClosed
 	}
 
-	session, err := m.m.StartSession()
-	if err != nil {
-		return nil, fmt.Errorf("starting mongo session: %s", err)
-	}
-
-	if err := session.StartTransaction(); err != nil {
-		return nil, fmt.Errorf("starting session txn: %s", err)
-	}
+	//session, err := m.m.StartSession()
+	//if err != nil {
+	//	return nil, fmt.Errorf("starting mongo session: %s", err)
+	//}
+	//
+	//if err := session.StartTransaction(); err != nil {
+	//	return nil, fmt.Errorf("starting session txn: %s", err)
+	//}
 
 	return &mongoTxn{
-		session: session,
-		m:       m,
-		ctx:     mongo.NewSessionContext(context.Background(), session),
+		//session: session,
+		m: m,
+		//ctx:     mongo.NewSessionContext(context.Background(), session),
 	}, nil
 }
 
@@ -68,15 +66,15 @@ func (t *mongoTxn) Commit() error {
 		return ErrTxnFinalized
 	}
 
-	ctx, cls := context.WithTimeout(context.Background(), t.m.txnTimeout)
-	defer cls()
-	if err := t.session.CommitTransaction(ctx); err != nil {
-		return fmt.Errorf("commiting session txn: %s", err)
-	}
+	//ctx, cls := context.WithTimeout(context.Background(), t.m.txnTimeout)
+	//defer cls()
+	//if err := t.session.CommitTransaction(ctx); err != nil {
+	//	return fmt.Errorf("commiting session txn: %s", err)
+	//}
 	t.finalized = true
-	ctx, cls = context.WithTimeout(context.Background(), t.m.opTimeout)
-	defer cls()
-	t.session.EndSession(ctx)
+	//ctx, cls = context.WithTimeout(context.Background(), t.m.opTimeout)
+	//defer cls()
+	//t.session.EndSession(ctx)
 
 	return nil
 }
@@ -88,15 +86,15 @@ func (t *mongoTxn) Discard() {
 		return
 	}
 
-	ctx, cls := context.WithTimeout(context.Background(), t.m.txnTimeout)
-	defer cls()
-	if err := t.session.AbortTransaction(ctx); err != nil {
-		log.Errorf("aborting transaction: %s", err)
-	}
-
-	ctx, cls = context.WithTimeout(context.Background(), t.m.opTimeout)
-	defer cls()
-	t.session.EndSession(ctx)
+	//ctx, cls := context.WithTimeout(context.Background(), t.m.txnTimeout)
+	//defer cls()
+	//if err := t.session.AbortTransaction(ctx); err != nil {
+	//	log.Errorf("aborting transaction: %s", err)
+	//}
+	//
+	//ctx, cls = context.WithTimeout(context.Background(), t.m.opTimeout)
+	//defer cls()
+	//t.session.EndSession(ctx)
 }
 
 func (t *mongoTxn) Get(key datastore.Key) ([]byte, error) {
