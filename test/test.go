@@ -14,7 +14,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var MongoUri = "mongodb://127.0.0.1:27017"
+func GetMongoUri() string {
+	env := os.Getenv("MONGO_URI")
+	if env != "" {
+		return env
+	}
+	return "mongodb://127.0.0.1:27017"
+}
 
 func StartMongoDB() (cleanup func()) {
 	_, currentFilePath, _, _ := runtime.Caller(0)
@@ -85,7 +91,7 @@ func StartMongoDB() (cleanup func()) {
 func checkServices() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
-	mc, err := mongo.Connect(ctx, options.Client().ApplyURI(MongoUri))
+	mc, err := mongo.Connect(ctx, options.Client().ApplyURI(GetMongoUri()))
 	if err != nil {
 		return err
 	}

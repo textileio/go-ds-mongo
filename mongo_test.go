@@ -25,12 +25,12 @@ func TestMain(m *testing.M) {
 }
 
 func TestMongoDatastore(t *testing.T) {
-	ds := createMongoDS(t, test.MongoUri)
+	ds := createMongoDS(t, test.GetMongoUri())
 	dstest.SubtestAll(t, ds)
 }
 
 func TestQuerySeek(t *testing.T) {
-	ds := createMongoDS(t, test.MongoUri)
+	ds := createMongoDS(t, test.GetMongoUri())
 	type kv struct {
 		key   string
 		value []byte
@@ -105,7 +105,7 @@ func TestQuerySeek(t *testing.T) {
 }
 
 func TestTxnDiscard(t *testing.T) {
-	ds := createMongoDS(t, test.MongoUri)
+	ds := createMongoDS(t, test.GetMongoUri())
 
 	txn, err := ds.NewTransaction(false)
 	if err != nil {
@@ -130,7 +130,7 @@ func TestTxnDiscard(t *testing.T) {
 }
 
 func TestTxnCommit(t *testing.T) {
-	ds := createMongoDS(t, test.MongoUri)
+	ds := createMongoDS(t, test.GetMongoUri())
 
 	txn, err := ds.NewTransaction(false)
 	if err != nil {
@@ -158,7 +158,7 @@ func TestTxnCommit(t *testing.T) {
 }
 
 func TestTxnBatch(t *testing.T) {
-	ds := createMongoDS(t, test.MongoUri)
+	ds := createMongoDS(t, test.GetMongoUri())
 
 	txn, err := ds.NewTransaction(false)
 	if err != nil {
