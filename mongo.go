@@ -18,6 +18,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 )
 
 var (
@@ -48,7 +49,9 @@ type keyValue struct {
 }
 
 func New(ctx context.Context, uri string, dbName string, opts ...Option) (*MongoDS, error) {
-	m, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
+	mongoOpts := options.Client()
+	mongoOpts.Monitor = otelmongo.NewMonitor("go-ds-mongo")
+	m, err := mongo.Connect(ctx, mongoOpts.ApplyURI(uri))
 	if err != nil {
 		return nil, fmt.Errorf("connecting to MongoDB: %s", err)
 	}
