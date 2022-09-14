@@ -67,7 +67,7 @@ func StartMongoDB() (cleanup func()) {
 		log.Fatalf("running docker-compose: %s", err)
 	}
 
-	limit := 10
+	limit := 20
 	retries := 0
 	var err error
 	for retries < limit {

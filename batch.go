@@ -26,7 +26,7 @@ type mongoBatch struct {
 	ds       *MongoDS
 }
 
-func (mb *mongoBatch) Put(key datastore.Key, val []byte) error {
+func (mb *mongoBatch) Put(ctx context.Context, key datastore.Key, val []byte) error {
 	mb.lock.Lock()
 	defer mb.lock.Unlock()
 	if mb.commited {
@@ -38,7 +38,7 @@ func (mb *mongoBatch) Put(key datastore.Key, val []byte) error {
 	return nil
 }
 
-func (mb *mongoBatch) Delete(key datastore.Key) error {
+func (mb *mongoBatch) Delete(ctx context.Context, key datastore.Key) error {
 	mb.lock.Lock()
 	defer mb.lock.Unlock()
 	if mb.commited {
@@ -50,7 +50,7 @@ func (mb *mongoBatch) Delete(key datastore.Key) error {
 	return nil
 }
 
-func (mb *mongoBatch) Commit() error {
+func (mb *mongoBatch) Commit(ctx context.Context) error {
 	mb.lock.Lock()
 	defer mb.lock.Unlock()
 	if mb.commited {
@@ -77,7 +77,7 @@ func (mb *mongoBatch) Commit() error {
 
 	bulkOption := options.BulkWriteOptions{}
 	bulkOption.SetOrdered(false) // Will do things in parallel
-	ctx, cls := context.WithTimeout(context.Background(), mb.ds.opTimeout*time.Duration(len(operations)))
+	ctx, cls := context.WithTimeout(ctx, mb.ds.opTimeout*time.Duration(len(operations)))
 	defer cls()
 	if _, err := mb.ds.col.BulkWrite(ctx, operations, &bulkOption); err != nil {
 		return fmt.Errorf("committing batch: %s", err)
