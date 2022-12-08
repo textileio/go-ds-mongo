@@ -114,7 +114,7 @@ func (m *MongoDS) GetSize(ctx context.Context, key datastore.Key) (int, error) {
 		return 0, ErrClosed
 	}
 
-	ctx, cls := context.WithTimeout(ctx, m.opTimeout)
+	ctx, cls := context.WithTimeout(context.Background(), m.opTimeout)
 	defer cls()
 	return m.getSize(ctx, key)
 }
@@ -125,7 +125,7 @@ func (m *MongoDS) Get(ctx context.Context, key datastore.Key) ([]byte, error) {
 	if m.closed {
 		return nil, ErrClosed
 	}
-	ctx, cls := context.WithTimeout(ctx, m.opTimeout)
+	ctx, cls := context.WithTimeout(context.Background(), m.opTimeout)
 	defer cls()
 	return m.get(ctx, key)
 }
@@ -137,7 +137,7 @@ func (m *MongoDS) Delete(ctx context.Context, key datastore.Key) error {
 		return ErrClosed
 	}
 
-	ctx, cls := context.WithTimeout(ctx, m.opTimeout)
+	ctx, cls := context.WithTimeout(context.Background(), m.opTimeout)
 	defer cls()
 	return m.delete(ctx, key)
 }
@@ -149,7 +149,7 @@ func (m *MongoDS) QueryExtended(ctx context.Context, q dsextensions.QueryExt) (q
 		return nil, ErrClosed
 	}
 
-	ctx, cls := context.WithTimeout(ctx, m.opTimeout)
+	ctx, cls := context.WithTimeout(context.Background(), m.opTimeout)
 	defer cls()
 
 	return m.query(ctx, q)
@@ -162,7 +162,7 @@ func (m *MongoDS) Query(ctx context.Context, q query.Query) (query.Results, erro
 		return nil, ErrClosed
 	}
 
-	ctx, cls := context.WithTimeout(ctx, m.opTimeout)
+	ctx, cls := context.WithTimeout(context.Background(), m.opTimeout)
 	defer cls()
 
 	qe := dsextensions.QueryExt{Query: q}
@@ -186,12 +186,13 @@ func (m *MongoDS) Close() error {
 }
 
 func (m *MongoDS) get(ctx context.Context, key datastore.Key) ([]byte, error) {
-	sr := m.col.FindOne(ctx, bson.M{"_id": key.String()})
+	id := key.String()
+	sr := m.col.FindOne(ctx, bson.M{"_id": id})
 	if sr.Err() == mongo.ErrNoDocuments {
 		return nil, datastore.ErrNotFound
 	}
 	if sr.Err() != nil {
-		return nil, fmt.Errorf("delete document: %s", sr.Err())
+		return nil, fmt.Errorf("get document: %s", sr.Err())
 	}
 	var kv keyValue
 	if err := sr.Decode(&kv); err != nil {

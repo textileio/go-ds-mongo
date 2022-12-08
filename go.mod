@@ -9,5 +9,5 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/textileio/go-datastore-extensions v1.1.0
 	go.mongodb.org/mongo-driver v1.7.1
-	golang.org/x/sys v0.0.0-20220913175220-63ea55921009 // indirect
+	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec // indirect
 )

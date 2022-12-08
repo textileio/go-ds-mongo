@@ -26,6 +26,7 @@ type mongoTxn struct {
 
 	m       *MongoDS
 	session mongo.Session
+	ctx     mongo.SessionContext
 }
 
 var _ dsextensions.TxnExt = (*mongoTxn)(nil)
@@ -56,6 +57,7 @@ func (m *MongoDS) newTransaction(bool) (dsextensions.TxnExt, error) {
 	return &mongoTxn{
 		session: session,
 		m:       m,
+		ctx:     mongo.NewSessionContext(context.Background(), session),
 	}, nil
 }
 
@@ -66,13 +68,13 @@ func (t *mongoTxn) Commit(ctx context.Context) error {
 		return ErrTxnFinalized
 	}
 
-	ctx, cls := context.WithTimeout(ctx, t.m.txnTimeout)
+	ctx, cls := context.WithTimeout(context.Background(), t.m.txnTimeout)
 	defer cls()
 	if err := t.session.CommitTransaction(ctx); err != nil {
 		return fmt.Errorf("commiting session txn: %s", err)
 	}
 	t.finalized = true
-	ctx, cls = context.WithTimeout(ctx, t.m.opTimeout)
+	ctx, cls = context.WithTimeout(context.Background(), t.m.opTimeout)
 	defer cls()
 	t.session.EndSession(ctx)
 
@@ -103,7 +105,7 @@ func (t *mongoTxn) Get(ctx context.Context, key datastore.Key) ([]byte, error) {
 	if t.finalized {
 		return nil, ErrTxnFinalized
 	}
-	return t.m.get(ctx, key)
+	return t.m.get(t.ctx, key)
 }
 
 func (t *mongoTxn) Has(ctx context.Context, key datastore.Key) (bool, error) {
@@ -112,7 +114,7 @@ func (t *mongoTxn) Has(ctx context.Context, key datastore.Key) (bool, error) {
 	if t.finalized {
 		return false, ErrTxnFinalized
 	}
-	return t.m.has(ctx, key)
+	return t.m.has(t.ctx, key)
 }
 
 func (t *mongoTxn) GetSize(ctx context.Context, key datastore.Key) (int, error) {
@@ -121,7 +123,7 @@ func (t *mongoTxn) GetSize(ctx context.Context, key datastore.Key) (int, error) 
 	if t.finalized {
 		return 0, ErrTxnFinalized
 	}
-	return t.m.getSize(ctx, key)
+	return t.m.getSize(t.ctx, key)
 }
 
 func (t *mongoTxn) Query(ctx context.Context, q query.Query) (query.Results, error) {
@@ -131,7 +133,7 @@ func (t *mongoTxn) Query(ctx context.Context, q query.Query) (query.Results, err
 		return nil, ErrTxnFinalized
 	}
 	qe := dsextensions.QueryExt{Query: q}
-	return t.m.query(ctx, qe)
+	return t.m.query(t.ctx, qe)
 }
 
 func (t *mongoTxn) QueryExtended(ctx context.Context, q dsextensions.QueryExt) (query.Results, error) {
@@ -140,7 +142,7 @@ func (t *mongoTxn) QueryExtended(ctx context.Context, q dsextensions.QueryExt) (
 	if t.finalized {
 		return nil, ErrTxnFinalized
 	}
-	return t.m.query(ctx, q)
+	return t.m.query(t.ctx, q)
 }
 
 func (t *mongoTxn) Delete(ctx context.Context, key datastore.Key) error {
@@ -149,7 +151,7 @@ func (t *mongoTxn) Delete(ctx context.Context, key datastore.Key) error {
 	if t.finalized {
 		return ErrClosed
 	}
-	return t.m.delete(ctx, key)
+	return t.m.delete(t.ctx, key)
 }
 
 func (t *mongoTxn) Put(ctx context.Context, key datastore.Key, val []byte) error {
@@ -158,5 +160,5 @@ func (t *mongoTxn) Put(ctx context.Context, key datastore.Key, val []byte) error
 	if t.finalized {
 		return ErrClosed
 	}
-	return t.m.put(ctx, key, val)
+	return t.m.put(t.ctx, key, val)
 }
